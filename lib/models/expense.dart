@@ -1,13 +1,15 @@
 class Expense {
   final String id;
-  final DateTime date;
   final double amount;
   final String note;
+  final DateTime date;
+  final String category;
 
   Expense({
     required this.id,
-    required this.date,
     required this.amount,
-    this.note = '',
+    required this.note,
+    required this.date,
+    required this.category,
   });
 }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'screens/categories_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
-  runApp(const ExpenseApp());
+  runApp(const ExpenseTrackerApp());
 }
 
-class ExpenseApp extends StatelessWidget {
-  const ExpenseApp({super.key});
+class ExpenseTrackerApp extends StatelessWidget {
+  const ExpenseTrackerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,10 +14,10 @@ class ExpenseApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Expense Tracker',
       theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
         useMaterial3: true,
+        colorSchemeSeed: Colors.teal,
       ),
-      home: const CategoriesScreen(),
+      home: const HomeScreen(),
     );
   }
 }

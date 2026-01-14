@@ -1,137 +1,166 @@
 import 'package:flutter/material.dart';
 import '../models/expense.dart';
+import '../services/storage_service.dart';
 
 class ExpensesDayScreen extends StatefulWidget {
-  final DateTime day;
-  final String category;
-  final List<Expense> initialExpenses;
-  final void Function(List<Expense>) onSave;
+  final DateTime date;
 
-  const ExpensesDayScreen({
-    super.key,
-    required this.day,
-    required this.category,
-    required this.initialExpenses,
-    required this.onSave,
-  });
+  const ExpensesDayScreen({super.key, required this.date});
 
   @override
   State<ExpensesDayScreen> createState() => _ExpensesDayScreenState();
 }
 
 class _ExpensesDayScreenState extends State<ExpensesDayScreen> {
-  late List<Expense> expenses;
+  final StorageService _storage = StorageService();
+  final TextEditingController _titleCtrl = TextEditingController();
+  final TextEditingController _amountCtrl = TextEditingController();
+
+  List<Expense> expenses = [];
 
   @override
   void initState() {
     super.initState();
-    expenses = List.from(widget.initialExpenses);
+    _loadExpenses();
   }
 
-  void _addExpense() {
-    final amountCtrl = TextEditingController();
-    final noteCtrl = TextEditingController();
+  Future<void> _loadExpenses() async {
+    expenses = await _storage.getExpenses(widget.date);
+    setState(() {});
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Expense'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: amountCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Amount'),
-            ),
-            TextField(
-              controller: noteCtrl,
-              decoration: const InputDecoration(labelText: 'Note'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final amount = double.tryParse(amountCtrl.text);
-              if (amount == null) return;
+  Future<void> _addExpense() async {
+    if (_titleCtrl.text.trim().isEmpty ||
+        _amountCtrl.text.trim().isEmpty) return;
 
-              setState(() {
-                expenses.add(
-                  Expense(
-                    id: DateTime.now().toIso8601String(),
-                    amount: amount,
-                    note: noteCtrl.text,
-                    date: widget.day,
-                    category: widget.category,
-                  ),
-                );
-              });
-
-              Navigator.pop(ctx);
-            },
-            child: const Text('Add'),
-          ),
-        ],
+    expenses.add(
+      Expense(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        title: _titleCtrl.text.trim(),
+        amount: double.tryParse(_amountCtrl.text) ?? 0,
       ),
     );
+
+    await _storage.saveExpenses(widget.date, expenses);
+
+    _titleCtrl.clear();
+    _amountCtrl.clear();
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final total =
-        expenses.fold<double>(0.0, (sum, e) => sum + e.amount);
+    // PLACEHOLDER VALUES (logic later)
+    const double monthlyBudget = 20000;
+    const double totalExpense = 3450;
 
     return Scaffold(
-      appBar: AppBar(
-        title:
-            Text('${widget.day.day}/${widget.day.month}/${widget.day.year}'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            widget.onSave(expenses);
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addExpense,
-        child: const Icon(Icons.add),
-      ),
       body: Column(
         children: [
+          // SUMMARY TABLE
           Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(
-              'Total: ₹$total',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.grey.shade100,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: const [
+                        Text(
+                          'Monthly Budget',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '₹20,000',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: Colors.grey,
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: const [
+                        Text(
+                          'Total Expense',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '₹3,450',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+
+          // EXPENSE INPUT
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _titleCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Expense title',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _amountCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _addExpense,
+                  child: const Text('Add Expense'),
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
           Expanded(
             child: expenses.isEmpty
-                ? const Center(child: Text('No expenses'))
+                ? const Center(child: Text('No expenses yet'))
                 : ListView.builder(
                     itemCount: expenses.length,
-                    itemBuilder: (ctx, i) {
+                    itemBuilder: (_, i) {
                       final e = expenses[i];
                       return ListTile(
-                        title: Text('₹${e.amount}'),
-                        subtitle: Text(e.note),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () {
-                            setState(() {
-                              expenses.removeAt(i);
-                            });
-                          },
-                        ),
+                        title: Text(e.title),
+                        trailing:
+                            Text('₹${e.amount.toStringAsFixed(2)}'),
                       );
                     },
                   ),
